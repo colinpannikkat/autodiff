@@ -1,1 +1,1 @@
-# Autodiff: An auto differentiation framework from scratch
+# Autodiff: An auto differentiation engine from scratch
