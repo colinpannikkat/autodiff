@@ -3,8 +3,10 @@ from autodiff.func import exp
 import matplotlib.pyplot as plt
 import numpy as np
 
+
 def tanh(x):
     return ((-exp((x * -2))) + 1) / (exp(-(x * 2)) + 1.0)
+
 
 x = ad.Variable(1)
 z = tanh(x)
@@ -20,8 +22,8 @@ y = tanh(x_var)
 y.backward()
 grad = x_var.grad
 
-plt.plot(   
+plt.plot(
             x, y.data,
             x, grad
-        )                
+        )
 plt.show()

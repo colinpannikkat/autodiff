@@ -9,6 +9,7 @@ Speed comparison between autodiff and pytorch for forward and backward pass.
 Simulating 2-layer NN forward pass, with cross_entropy_loss at end.
 """
 
+
 def autodiff(x, y):
     W1 = Variable([[0.5, -0.2], [0.3, 0.8]])
     b1 = Variable([0.1, -0.1])
@@ -22,6 +23,7 @@ def autodiff(x, y):
 
     loss.backward()
 
+
 def pytorch(x, y):
     W1 = torch.tensor([[0.5, -0.2], [0.3, 0.8]], requires_grad=True)
     b1 = torch.tensor([0.1, -0.1], requires_grad=True)
@@ -34,6 +36,7 @@ def pytorch(x, y):
     loss = torch.nn.functional.cross_entropy(y_hat, y)
 
     loss.backward()
+
 
 def speed_comparison():
     x_torch = torch.tensor([[1.0, 2.0]])
@@ -54,6 +57,7 @@ def speed_comparison():
 
     print(f"Autodiff time: {autodiff_time:.6f} seconds")
     print(f"PyTorch time: {pytorch_time:.6f} seconds")
+
 
 if __name__ == "__main__":
     speed_comparison()

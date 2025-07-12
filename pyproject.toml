@@ -1,0 +1,8 @@
+[project]
+name = "autodiff"
+version = "0.1"
+license = {text = "MIT"}
+
+[build-system]
+requires = ["setuptools"]
+build-backend = "setuptools.build_meta"

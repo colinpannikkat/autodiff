@@ -1,5 +1,4 @@
 from autodiff import Variable
-import autodiff as ad
 from autodiff.func import relu, cross_entropy_loss
 from sklearn.datasets import fetch_openml
 from sklearn.model_selection import train_test_split
@@ -13,6 +12,7 @@ Used for testing autodifferentiation framework.
 The NN trains on MNIST, which has 56000 training examples, and 10 classes.
 """
 
+
 class TwoLayerNN:
     def __init__(self, input_size, hidden_size, output_size):
         self.W1 = Variable.random((input_size, hidden_size)) * ((2 / input_size) ** 0.5)
@@ -24,7 +24,7 @@ class TwoLayerNN:
         z1 = relu(x @ self.W1 + self.b1)
         z2 = z1 @ self.W2 + self.b2
         return z2
-    
+
     def train(self, x_train, y_train, batch=128, lr=0.01, epochs=100):
         num_batches = x_train.shape[0] // batch
         for epoch in range(epochs):
@@ -35,21 +35,21 @@ class TwoLayerNN:
                 end = start + batch
                 x_batch = x_train[start:end]
                 y_batch = y_train[start:end]
-                
+
                 predictions = self.forward(x_batch)
-                
+
                 # Compute loss (cross-entropy)
                 loss = cross_entropy_loss(predictions, y_batch)
                 loss.backward()
 
                 tot_loss += loss
-                
+
                 # Update weights and biases using SGD
                 self.W1.data -= lr * self.W1.grad
                 self.b1.data -= lr * self.b1.grad.sum(axis=0)
                 self.W2.data -= lr * self.W2.grad
                 self.b2.data -= lr * self.b2.grad.sum(axis=0)
-                
+
                 # Zero gradients
                 self.W1.zero_grad()
                 self.b1.zero_grad()
@@ -60,9 +60,10 @@ class TwoLayerNN:
                 del y_batch
                 del predictions
                 del loss
-            
+
             if (epoch + 1) % 10 == 0:
                 print(f"Epoch {epoch + 1}, Loss: {tot_loss.data / num_batches}")
+
 
 if __name__ == "__main__":
 
