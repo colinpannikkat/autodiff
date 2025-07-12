@@ -23,12 +23,10 @@ class Node(ABC):
 
     def __init__(
         self,
-        parents: list["Node"] = None,
         requires_grad: bool = False
     ):
         super().__init__()
 
-        self.parents = parents
         self.requires_grad = requires_grad
         self.grad = None
         self.data = None

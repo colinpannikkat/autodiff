@@ -1,5 +1,6 @@
 from abc import ABC, abstractmethod
-from autodiff.graph.var import Variable, Constant
+from autodiff.graph.var import Variable, Constant, Float
+from autodiff.config import is_higher_order_gradients_enabled
 
 
 class Op(ABC):
@@ -17,7 +18,7 @@ class Op(ABC):
         self.inputs = [*inputs]
         self.desc = "Op"
         self.grads = None
-        self.higher = False
+        self.higher_order = is_higher_order_gradients_enabled()
 
     def __repr__(self):
         return f"<{self.__class__.__name__}>"
@@ -31,7 +32,7 @@ class Op(ABC):
 
     @staticmethod
     @abstractmethod
-    def _backward(*args, **kwargs) -> list[Variable]:
+    def _backward(*args, **kwargs) -> list[float]:
         """Overideable backward function to gradients. Used to pass gradients to
         parents of the operation."""
         pass
@@ -41,30 +42,44 @@ class Op(ABC):
         return any(getattr(arg, "requires_grad", False) for arg in args)
 
     @staticmethod
-    def _coerce_primitive_to_constant(*args):
+    def _convert_primitive_to_constant(*args):
         return [arg if (isinstance(arg, Variable) or isinstance(arg, Constant)) else Constant(arg) for arg in args]
+
+    @staticmethod
+    def _convert_primitive_to_variable(*args):
+        return [arg if (isinstance(arg, Variable) or isinstance(arg, Constant)) else Variable(arg) for arg in args]
+
+    @staticmethod
+    def _convert_variable_to_float(*args):
+        return [Float(arg.data, arg.requires_grad) if isinstance(arg, Variable) else arg for arg in args]
 
     @classmethod
     def forward(cls, *args, **kwargs) -> Variable:
         """Computes a forward pass operation and returns a new variable node in a graph."""
-        args = cls._coerce_primitive_to_constant(*args)
+        args = cls._convert_primitive_to_constant(*args)
         return Variable(
             cls._forward(*args, **kwargs),
-            parents=[*args],
             op=cls(*args, **kwargs),
             requires_grad=cls._require_grad(*args)
         )
 
-    def backward(self, grad: Variable, *args, **kwargs) -> None:
+    def backward(self, grad: Variable | float, *args, **kwargs) -> None:
         """Computes the gradients of the arguments of the operation and passes them
         to the inputs of the operation (parents of the result)."""
 
-        self.higher = kwargs.get("allow_higher_order", False)  # higher order gradients
+        if self.higher_order:
+            inputs = self.inputs
+        else:
+            inputs = self._convert_variable_to_float(*self.inputs)
 
         if self.grads is None:
-            self.grads = self._backward()
+            self.grads = self._backward(inputs)
+
+        if self.higher_order:
+            self.grads = self._convert_primitive_to_variable(*self.grads)
+
         for parent, paren_grad in zip(self.inputs, self.grads):
-            parent.backward(paren_grad * grad, allow_higher_order=self.higher)
+            parent.backward(paren_grad * grad, **kwargs)
 
 
 class UnaryOp(Op):
@@ -100,6 +115,13 @@ class BinOp(Op):
     @classmethod
     @abstractmethod
     def _forward(cls, x, y, **kwargs):
+        pass
+
+    @staticmethod
+    @abstractmethod
+    def _backward(*args, **kwargs) -> list[float]:
+        """Overridable backward function to gradients. Used to pass gradients to
+        parents of the operation."""
         pass
 
     @staticmethod

@@ -10,17 +10,14 @@ class Neg(UnaryOp):
     def _forward(x: Node) -> float:
         return -x.data
 
-    def _backward(self) -> list[Node]:
+    @staticmethod
+    def _backward(inputs: list[Variable]) -> list[float]:
         """The gradient of negation is -1, unless constant.
         z = -x
         dz/dx = -1 (unless constant)
         """
-        x = self.x
 
-        if self.higher:
-            return [Variable(-1) if x.requires_grad else Variable(0)]
-
-        return [-1 if x.requires_grad else 0]
+        return [-1 if x.requires_grad else 0 for x in inputs]
 
     @staticmethod
     def op(x):
@@ -34,7 +31,8 @@ class Add(BinOp):
     def _forward(x: Node, y: Node) -> float:
         return x.data + y.data
 
-    def _backward(self) -> list[Node]:
+    @staticmethod
+    def _backward(inputs: list[Variable]) -> list[float]:
         """The gradient of any node in an addition operation is 1.
         If a node is a constant, its gradient should be zero. Both nodes
         that do not require gradients and Constants are identified by the
@@ -44,10 +42,7 @@ class Add(BinOp):
         dz/dy = 1 (unless constant)
         """
 
-        if self.higher:
-            return [Variable(1) if i.requires_grad else Variable(0) for i in self.inputs]
-
-        return [1 if i.requires_grad else 0 for i in self.inputs]
+        return [1 if x.requires_grad else 0 for x in inputs]
 
     @staticmethod
     def op(x, y):
@@ -61,20 +56,17 @@ class Mul(BinOp):
     def _forward(x: Node, y: Node) -> float:
         return x.data * y.data
 
-    def _backward(self) -> list[Variable]:
+    @staticmethod
+    def _backward(inputs: list[Variable]) -> list[float]:
         """Compute derivative for the product of two variables:
         z = x * y
         dz/dx = y
         dz/dy = x
         """
-        x, y = self.inputs
+        x, y = inputs
 
-        if self.higher:
-            x_grad = y if x.requires_grad else Variable(0)
-            y_grad = x if y.requires_grad else Variable(0)
-        else:
-            x_grad = y.data if x.requires_grad else 0
-            y_grad = x.data if y.requires_grad else 0
+        x_grad = y if x.requires_grad else 0
+        y_grad = x if y.requires_grad else 0
 
         return [x_grad, y_grad]
 
@@ -90,19 +82,18 @@ class Div(BinOp):
     def _forward(x: Node, y: Node) -> float:
         return x.data / y.data
 
-    def _backward(self) -> list[Variable]:
+    @staticmethod
+    def _backward(inputs: list[Variable]) -> list[float]:
         """Compute derivative for the division of two variables:
         z = x / y
         dz/dx = 1/y
         dz/dy = -(x^2)/y
         """
-        x, y = self.inputs
+        x, y = inputs
 
-        if self.higher:
-            x, y = x.data, y.data
+        x_grad = 1/y if x.requires_grad else 0
+        y_grad = -x/(y*y) if y.requires_grad else 0
 
-        x_grad = 1/y
-        y_grad = -x/(y*y)
         return [x_grad, y_grad]
 
     @staticmethod
@@ -117,20 +108,17 @@ class Pow(BinOp):
     def _forward(x: Node, y: Node) -> float:
         return x.data ** y.data
 
-    def _backward(self) -> list[Variable]:
+    @staticmethod
+    def _backward(inputs: list[Variable]) -> list[float]:
         """Compute derivative for the power operation of two variables:
         z = x^y
         dz/dx = y * x^(y-1)
         dz/dy = x^y * log(x)
         """
-        x, y = self.inputs
+        x, y = inputs
 
-        if self.higher:
-            x_grad = y * (x ** (y - 1)) if x.requires_grad else Variable(0)
-            y_grad = (x ** y) * x.log() if y.requires_grad else Variable(0)
-        else:
-            x_grad = y.data * (x.data ** (y.data - 1)) if x.requires_grad else 0
-            y_grad = (x.data ** y.data) * Log.forward(x).data if y.requires_grad else 0
+        x_grad = y * (x ** (y - 1)) if x.requires_grad else 0
+        y_grad = (x ** y) * x.log() if y.requires_grad else 0
 
         return [x_grad, y_grad]
 
@@ -146,17 +134,14 @@ class Log(UnaryOp):
     def _forward(x: Node) -> float:
         return math.log(x.data)
 
-    def _backward(self) -> list[Node]:
+    @staticmethod
+    def _backward(inputs: list[Variable]) -> list[float]:
         """The gradient of log(x) is 1/x, unless constant.
         z = log(x)
         dz/dx = 1/x (unless constant)
         """
-        x = self.x
 
-        if self.higher:
-            return [1 / x if x.requires_grad else Variable(0)]
-
-        return [1 / x.data if x.requires_grad else 0]
+        return [1 / x if x.requires_grad else 0 for x in inputs]
 
     @staticmethod
     def op(x):
@@ -170,17 +155,14 @@ class Exp(UnaryOp):
     def _forward(x: Node) -> float:
         return math.exp(x.data)
 
-    def _backward(self) -> list[Node]:
+    @staticmethod
+    def _backward(inputs: list[Variable]) -> list[float]:
         """The gradient of exp(x) is exp(x), unless constant.
         z = exp(x)
         dz/dx = exp(x) (unless constant)
         """
-        x = self.x
 
-        if self.higher:
-            return [self.forward(x) if x.requires_grad else Variable(0)]
-
-        return [self.forward(x).data if x.requires_grad else 0]
+        return [Exp.forward(x).data if x.requires_grad else 0 for x in inputs]
 
     @staticmethod
     def op(x):
@@ -217,3 +199,6 @@ Variable.__neg__ = Neg.op
 
 # Log
 Variable.log = Log.op
+
+# Exp
+Variable.exp = Exp.op

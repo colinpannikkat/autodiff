@@ -1,5 +1,9 @@
-from autodiff.graph.operations.math import Exp
+"""Built-in functions"""
 
 
 def exp(x):
-    return Exp.forward(x)
+    return x.exp()
+
+
+def log(x):
+    return x.log()

@@ -21,8 +21,8 @@ args = {
     'x1': -5.,
     'x2': 2.,
     'alpha': 0.01,
-    'iterations': 100000,
-    'eps': 1e-24
+    'iterations': int(1e5),
+    'eps': 1e-31
 }
 
 
@@ -38,21 +38,13 @@ def gd(x1, x2, alpha, iterations, eps=1e-24):
 
         z.backward()
 
-        x1_var.data -= alpha * x1_var.grad.data
-        x2_var.data -= alpha * x2_var.grad.data
+        x1_var.data -= alpha * x1_var.grad
+        x2_var.data -= alpha * x2_var.grad
 
         x1_var.zero_grad()
         x2_var.zero_grad()
 
     return x1_var.data, x2_var.data, i
-
-
-start = time.time()
-x1_opt, x2_opt, i = gd(**args)
-autodiff_time = time.time() - start
-
-print(f"AUTODIFF: Optimized values: x1 = {x1_opt}, x2 = {x2_opt}, \
-      z = {func(x1_opt, x2_opt)}, after {i} iterations in {autodiff_time} seconds.")
 
 
 def gd_torch(x1, x2, alpha, iterations, eps=1e-24):
@@ -79,6 +71,13 @@ def gd_torch(x1, x2, alpha, iterations, eps=1e-24):
 start = time.time()
 x1_opt, x2_opt, i = gd_torch(**args)
 torch_time = time.time() - start
+
+start = time.time()
+x1_opt, x2_opt, i = gd(**args)
+autodiff_time = time.time() - start
+
+print(f"AUTODIFF: Optimized values: x1 = {x1_opt}, x2 = {x2_opt}, \
+      z = {func(x1_opt, x2_opt)}, after {i} iterations in {autodiff_time} seconds.")
 
 print(f"TORCH: Optimized values: x1 = {x1_opt}, x2 = {x2_opt}, \
       z = {func(x1_opt, x2_opt)}, after {i} iterations in {torch_time} seconds.")
