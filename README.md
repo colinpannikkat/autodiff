@@ -10,7 +10,7 @@ You can install the package by cloning the repository and entering the following
 pip install .
 ```
 
-Then, instantiate a variable and do any computation
+Then, instantiate a variable and do any computation with it.
 
 ```python3
 from autodiff import Variable
