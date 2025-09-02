@@ -1,6 +1,7 @@
 """Test cases for computational graph functions"""
 from autodiff import Variable, Node
 from autodiff.func import exp
+from autodiff.config import enable_higher_order_gradients, disable_higher_order_gradients
 import pytest
 import numpy as np
 
@@ -9,14 +10,6 @@ class TestGraph:
     def test_node_instantiation(self):
         with pytest.raises(TypeError):
             Node()
-
-    def test_variable_parents(self):
-        var1 = Variable(1.)
-        var2 = Variable(2.)
-        var3 = Variable(3., parents=[var1, var2])
-
-        assert var1 == var3.parents[0]
-        assert var2 == var3.parents[1]
 
     def test_variable_forward(self):
         number = 3.
@@ -84,20 +77,43 @@ class TestGraph:
 
     def test_double_derivative(self):
         # f(x) = x^2, f'(x) = 2x, f''(x) = 2
+        enable_higher_order_gradients()
         x = Variable(3.0)
         y = x * x
-        y.backward(allow_higher_order=True)
+        y.backward()
         grad_x = x.grad
 
         assert isinstance(grad_x, Variable)
 
         # Now compute second derivative by differentiating grad_x w.r.t x
         x.zero_grad()
-        grad_x.backward(allow_higher_order=True)
+        grad_x.backward()
         second_derivative = x.grad
+
+        disable_higher_order_gradients()
 
         assert grad_x == 6.0
         assert second_derivative == 2.0
+
+    def test_double_derivative_exp(self):
+        # f(x) = exp(x), f'(x) = exp(x), f''(x) = exp(x)
+        enable_higher_order_gradients()
+        x = Variable(1.0)
+        y = exp(x)
+        y.backward()
+        grad_x = x.grad
+
+        assert isinstance(grad_x, Variable)
+        assert grad_x.requires_grad
+
+        x.zero_grad()
+        grad_x.backward()
+        second_derivative = x.grad
+
+        disable_higher_order_gradients()
+
+        assert np.isclose(grad_x.data, np.exp(1.0))
+        assert np.isclose(second_derivative.data, np.exp(1.0))
 
     def test_division(self):
         x = Variable(3)
@@ -133,6 +149,15 @@ class TestGraph:
 
         assert x.grad == 3/2
         assert y.grad == -9/16
+
+    def test_divison_same_var(self):
+        x = Variable(3)
+
+        z = (x*x*x) / (x*x)
+
+        z.backward(retain_graph=True)
+
+        assert x.grad == 1
 
     def test_sub_operation(self):
         x = Variable(5.)
