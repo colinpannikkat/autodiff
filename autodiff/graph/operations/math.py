@@ -1,5 +1,5 @@
 from autodiff.graph.operations.base import BinOp, UnaryOp
-from autodiff.graph.var import Variable, Node
+from autodiff.graph.var import Variable, Node, Float
 import math
 
 
@@ -32,7 +32,7 @@ class Add(BinOp):
         return x.data + y.data
 
     @staticmethod
-    def _backward(inputs: list[Variable]) -> list[float]:
+    def _backward(inputs: list[Variable | Float]) -> list[float]:
         """The gradient of any node in an addition operation is 1.
         If a node is a constant, its gradient should be zero. Both nodes
         that do not require gradients and Constants are identified by the
@@ -49,6 +49,34 @@ class Add(BinOp):
         return Add.forward(x, y)
 
 
+class Sub(BinOp):
+    """Compute subtraction between two nodes."""
+    @staticmethod
+    def _forward(x: Node, y: Node) -> float:
+        return x.data - y.data
+
+    @staticmethod
+    def _backward(inputs: list[Variable | Float]) -> list[float]:
+        """The gradient of any node in an addition operation is 1.
+        If a node is a constant, its gradient should be zero. Both nodes
+        that do not require gradients and Constants are identified by the
+        requires_grad attribute.
+        z = x - y
+        dz/dx = 1 (unless constant)
+        dz/dy = -1 (unless constant)
+        """
+        x, y = inputs
+
+        x_grad = 1. if x.requires_grad else 0.
+        y_grad = -1. if y.requires_grad else 0.
+
+        return [x_grad, y_grad]
+
+    @staticmethod
+    def op(x, y):
+        return Sub.forward(x, y)
+
+
 class Mul(BinOp):
     """Computes multiplication between two nodes."""
 
@@ -57,7 +85,7 @@ class Mul(BinOp):
         return x.data * y.data
 
     @staticmethod
-    def _backward(inputs: list[Variable]) -> list[float]:
+    def _backward(inputs: list[Variable | Float]) -> list[float]:
         """Compute derivative for the product of two variables:
         z = x * y
         dz/dx = y
@@ -83,16 +111,16 @@ class Div(BinOp):
         return x.data / y.data
 
     @staticmethod
-    def _backward(inputs: list[Variable]) -> list[float]:
+    def _backward(inputs: list[Variable | Float]) -> list[float]:
         """Compute derivative for the division of two variables:
         z = x / y
         dz/dx = 1/y
-        dz/dy = -(x^2)/y
+        dz/dy = -x/(y^2)
         """
         x, y = inputs
 
         x_grad = 1/y if x.requires_grad else 0
-        y_grad = -x/(y*y) if y.requires_grad else 0
+        y_grad = -x/(y*y) if y.requires_grad and x.requires_grad else 0
 
         return [x_grad, y_grad]
 
@@ -109,7 +137,7 @@ class Pow(BinOp):
         return x.data ** y.data
 
     @staticmethod
-    def _backward(inputs: list[Variable]) -> list[float]:
+    def _backward(inputs: list[Variable | Float]) -> list[float]:
         """Compute derivative for the power operation of two variables:
         z = x^y
         dz/dx = y * x^(y-1)
@@ -135,7 +163,7 @@ class Log(UnaryOp):
         return math.log(x.data)
 
     @staticmethod
-    def _backward(inputs: list[Variable]) -> list[float]:
+    def _backward(inputs: list[Variable | Float]) -> list[float]:
         """The gradient of log(x) is 1/x, unless constant.
         z = log(x)
         dz/dx = 1/x (unless constant)
@@ -152,21 +180,8 @@ class Exp(UnaryOp):
     """Computes exponential function of a node."""
 
     @staticmethod
-    def _forward(x: Node) -> float:
-        return math.exp(x.data)
-
-    @staticmethod
-    def _backward(inputs: list[Variable]) -> list[float]:
-        """The gradient of exp(x) is exp(x), unless constant.
-        z = exp(x)
-        dz/dx = exp(x) (unless constant)
-        """
-
-        return [Exp.forward(x).data if x.requires_grad else 0 for x in inputs]
-
-    @staticmethod
     def op(x):
-        return Exp.forward(x)
+        return Pow.forward(math.e, x)
 
 
 # Manual overloading of Variable operations
@@ -176,8 +191,8 @@ Variable.__add__ = Add.op
 Variable.__radd__ = Add.op
 
 # Subtraction (derivative is the same with the negation added)
-Variable.__sub__ = lambda self, other: Add.op(self, -other)
-Variable.__rsub__ = lambda self, other: Add.op(other, -self)
+Variable.__sub__ = Sub.op
+Variable.__rsub__ = lambda self, other: Sub.op(other, self)
 
 # Multiplication
 Variable.__mul__ = Mul.op
@@ -186,16 +201,18 @@ Variable.__rmul__ = Mul.op
 # Division
 Variable.__truediv__ = Div.op
 Variable.__rtruediv__ = lambda self, other: Div.op(other, self)
-Variable.__itruediv__ = Div.op  # In-place division (x /= y)
-Variable.__div__ = Div.op       # Python 2 division (x / y)
-Variable.__idiv__ = Div.op      # Python 2 in-place division (x /= y)
+# Variable.__itruediv__ = Div.op  # In-place division (x /= y)
+# Variable.__div__ = Div.op       # Python 2 division (x / y)
+# Variable.__idiv__ = Div.op      # Python 2 in-place division (x /= y)
 
 # Power
 Variable.__pow__ = Pow.op
 Variable.__rpow__ = lambda self, other: Pow.op(other, self)
 
+
 # Negation
 Variable.__neg__ = Neg.op
+
 
 # Log
 Variable.log = Log.op

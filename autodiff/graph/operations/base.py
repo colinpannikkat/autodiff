@@ -57,6 +57,7 @@ class Op(ABC):
     def forward(cls, *args, **kwargs) -> Variable:
         """Computes a forward pass operation and returns a new variable node in a graph."""
         args = cls._convert_primitive_to_constant(*args)
+
         return Variable(
             cls._forward(*args, **kwargs),
             op=cls(*args, **kwargs),
@@ -89,7 +90,6 @@ class UnaryOp(Op):
         x
     ):
         super().__init__(x)
-        self.x = x
 
     @classmethod
     @abstractmethod

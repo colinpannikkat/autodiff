@@ -77,7 +77,7 @@ x1_opt, x2_opt, i = gd(**args)
 autodiff_time = time.time() - start
 
 print(f"AUTODIFF: Optimized values: x1 = {x1_opt}, x2 = {x2_opt}, \
-      z = {func(x1_opt, x2_opt)}, after {i} iterations in {autodiff_time} seconds.")
+z = {func(x1_opt, x2_opt)}, after {i} iterations in {autodiff_time} seconds.")
 
 print(f"TORCH: Optimized values: x1 = {x1_opt}, x2 = {x2_opt}, \
-      z = {func(x1_opt, x2_opt)}, after {i} iterations in {torch_time} seconds.")
+z = {func(x1_opt, x2_opt)}, after {i} iterations in {torch_time} seconds.")
